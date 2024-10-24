@@ -53,7 +53,7 @@ Para ejecutar la aplicación necesitas tener instalado:
 
 ## Captura de pantalla
 
-![Interfaz de la aplicación](https://i.imgur.com/OItAhJf.jpeg)
+![Interfaz de la aplicación](https://i.imgur.com/WTVCTci.png)
 
 ## Contribución
 
