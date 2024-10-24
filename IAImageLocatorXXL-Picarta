@@ -1,0 +1,145 @@
+# IA IMAGE LOGATOR XXL by @TheXXLMAN
+
+"""
+IA Image Locator XXL
+
+Este script es una aplicación web interactiva creada con Streamlit que permite a los usuarios subir imágenes 
+y obtener su ubicación geográfica aproximada mediante un servicio de geolocalización de imágenes. Las imágenes 
+subidas son procesadas y se muestran en la interfaz de la aplicación. Una vez que la imagen es subida, el script 
+consulta una API externa para obtener las coordenadas GPS (latitud y longitud) aproximadas del lugar donde la imagen 
+fue tomada, según la predicción de un modelo de inteligencia artificial.
+
+El resultado de la geolocalización se muestra en un mapa interactivo generado con Folium. Los usuarios pueden subir 
+hasta 3 imágenes, y si las coordenadas son válidas, se colocarán marcadores en el mapa en función de las predicciones 
+obtenidas de la API.
+
+Características del código:
+- Subida de hasta 3 imágenes.
+- Procesamiento de imágenes utilizando OpenCV.
+- Interfaz amigable con Streamlit.
+- Mapa interactivo con Folium y Streamlit-Folium.
+- Geolocalización basada en un modelo de IA que predice las coordenadas GPS de las imágenes.
+
+Requisitos:
+- Streamlit: Para la interfaz web interactiva.
+- Requests: Para realizar solicitudes HTTP a la API.
+- OpenCV: Para el procesamiento de las imágenes subidas.
+- Folium: Para la visualización del mapa interactivo.
+- Streamlit-Folium: Para integrar el mapa en la interfaz de Streamlit.
+
+Para ejecutar la aplicación, asegúrate de instalar las dependencias listadas en el archivo requirements.txt y 
+configurar el archivo para usar tu clave de API correcta.
+"""
+
+import streamlit as st
+import requests
+import json
+import base64
+import folium
+from streamlit_folium import folium_static
+import numpy as np
+import cv2
+
+# Reemplaza 'PICARTA_API_TOKEN' con tu token de API de Picarta
+PICARTA_API_TOKEN = 'XXXXXXXXXXXXXXXXXXXX'                  # Reemplaza tu clave API con tu token de API de Picarta                                 
+PICARTA_API_URL = 'https://picarta.ai/classify'
+TOP_K = 3                                                   # Puedes elegir hasta 100 predicciones GPS, el valor predeterminado es 10, pero la cuota gratis es de 3 en 3
+headers = {"Content-Type": "application/json"}
+
+tooltip_text = "IA Image Locator XXL"
+tooltip_description = " by @TheXXLMAN - Contact: Telegram @TheXXLMAN"
+
+# Agregar la imagen al sidebar
+st.sidebar.image("https://i.imgur.com/OItAhJf.jpeg", caption="Ubicación de imágenes", use_column_width=True)
+
+# info xxl
+# Define el texto con el tooltip 
+# Muestra el texto en la barra lateral de Streamlit
+text_html_xxl_info = f'''
+<div class="tooltip"> ⏭️ {tooltip_text}
+  <span class="tooltiptext">{tooltip_description}</span>
+</div>
+'''
+st.sidebar.markdown(text_html_xxl_info, unsafe_allow_html=True)
+
+# Función para obtener la ubicación de una imagen
+def obtener_ubicacion(imagen):
+    img_path = base64.b64encode(imagen.read()).decode('utf-8')
+
+    payload = {
+        "TOKEN": PICARTA_API_TOKEN,
+        "IMAGE": img_path,
+        "TOP_K": 3,  # Asegúrate de que esta variable sea correcta
+        "Center_LATITUDE": None,
+        "Center_LONGITUDE": None,
+        "RADIUS": None
+    }
+
+    response = requests.post(PICARTA_API_URL, headers=headers, json=payload)
+
+    if response.status_code == 200:
+        data = response.json()
+        print("Respuesta de la API:", data)  # Imprimir la respuesta completa para depuración
+        latitude = data.get('ai_lat')  # Extraer ai_lat
+        longitude = data.get('ai_lon')  # Extraer ai_lon
+        print(f"Coordenadas obtenidas: {latitude}, {longitude}")  # Imprimir coordenadas obtenidas
+        return latitude, longitude
+    else:
+        st.error(f"Error al subir la imagen: {response.status_code} - {response.text}")
+        return None
+
+
+# Función para mostrar un mapa básico
+def mostrar_mapa(locations):
+    mapa = folium.Map(location=[0, 0], zoom_start=2)
+    
+    for loc in locations:
+        if loc is not None:
+            latitude, longitude = loc
+            if isinstance(latitude, (int, float)) and isinstance(longitude, (int, float)):
+                try:
+                    folium.Marker(location=[latitude, longitude]).add_to(mapa)
+                except Exception as e:
+                    st.warning(f"Error al agregar marcador: {e}")
+            else:
+                st.warning("Coordenadas no válidas para el marcador.")
+    
+    folium_static(mapa)
+
+
+# Interfaz de Streamlit
+st.title("IA Image Locator XXL")
+
+# Cargar hasta 3 imágenes
+uploaded_files = st.file_uploader("Sube hasta 3 imágenes", type=["png", "jpg", "jpeg"], accept_multiple_files=True)
+
+if uploaded_files and len(uploaded_files) <= 3:
+    ubicaciones = []
+    
+    for uploaded_file in uploaded_files:
+        st.write(f"Procesando: {uploaded_file.name}")
+
+        # Convertir a formato compatible con OpenCV
+        img_bytes = np.frombuffer(uploaded_file.read(), np.uint8)
+        img = cv2.imdecode(img_bytes, cv2.IMREAD_COLOR)
+        
+        # Mostrar la imagen en Streamlit
+        st.image(img, caption=uploaded_file.name, channels="BGR")
+
+        # Restablecer el puntero del archivo para leerlo nuevamente
+        uploaded_file.seek(0)  # Regresar al inicio del archivo
+        ubicacion = obtener_ubicacion(uploaded_file)
+        if ubicacion:
+            ubicaciones.append(ubicacion)
+    
+    # Mostrar el mapa con las ubicaciones
+    if ubicaciones:
+        st.header("Mapa de Ubicaciones")
+        locations_validas = [loc for loc in ubicaciones if loc is not None and all(isinstance(coord, (int, float)) for coord in loc)]
+        if locations_validas:
+            mostrar_mapa(locations_validas)
+        else:
+            st.warning("No se encontraron ubicaciones válidas.")
+
+else:
+    st.warning("Por favor, sube hasta 3 imágenes.")
