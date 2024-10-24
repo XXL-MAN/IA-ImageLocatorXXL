@@ -58,6 +58,7 @@ Para ejecutar la aplicación necesitas tener instalado:
 ## Contribución
 
 Las contribuciones son bienvenidas. Si encuentras un problema o tienes una mejora en mente, no dudes en abrir un `issue` o enviar un `pull request`.
+Creado por Andrés Naranjo @TheXXLMAN '2024 - [Contacta conmigo en MyPublicInbox](https://mypublicinbox.com/thexxlman)
 
 
 
